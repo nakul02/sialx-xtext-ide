@@ -1,0 +1,333 @@
+grammar edu.ufl.cise.sial.Sial with org.eclipse.xtext.common.Terminals
+
+generate sial "http://www.ufl.edu/cise/sial/Sial"
+
+
+Program:
+	('import' imports+=STRING)*
+	'sial' startprogramname=IDENT EOLs
+	(decs+=Decs EOLs)*
+	(stmnts+=Statement EOLs)*
+	'endsial' endprogramname=IDENT EOLs
+;
+
+Statement:
+	do=DoStatement | 
+	dosub=DoSubIndexStatement | 
+	if=IfStatement | 
+	pardo=PardoStatement | 
+	call=CallStatement |
+	return=ReturnStatement | 
+	barrier=BarrierStatement | 
+	exit=ExitStatement |
+	cycle=CycleStatement | 
+	alloc=AllocateStatement | 
+	dealloc=DeallocateStatement | 
+	create=CreateStatement | 
+	delete=DeleteStatement |
+	put=PutStatement |
+	putplus=PutSumStatement |
+	get=GetStatement | 
+	preprare=PrepareStatement | 
+	prepareplus=PrepareSumStatement |
+	request=RequestStatement | 
+	prequest=PRequestStatement | 
+	collective=CollectiveStatement | 
+	destroy=DestroyStatement |
+	execute=ExecuteStatement | 
+	assign=AssignStatement |
+	println=PrintlnStatement | 
+	print=PrintStatement | 
+	printi=PrintIndexStatement |EOLSrintscalar=PrintScalarStatement |
+	gpualloc=GPUAllocateStatement | 
+	gpufree=GPUFreeStatement | 
+	gpuput=GPUPutStatement | 
+	gputget=GPUGetStatement |  
+	gputstatements=GPUStatements
+;
+
+
+AssignStatement:
+	sb=ScalarOrBlockVar assignop=AssignOp expr=Expression
+;
+
+ScalarOrBlockVar:
+	id=IDENT | dblock=DataBlock
+;
+
+Expression:
+	UnaryExpression | BinaryExpression
+;
+
+BinaryExpression:
+	rhs1=UnaryExpression op=BinOp rhs2=UnaryExpression
+;
+
+BinOp:
+	times?='*' | div?='/' | plus?='+' | minus?='-' | tensor?='^'
+;
+
+AssignOp:
+	assign?= '=' | assignplus?='+=' | assignminus?='-=' | assigntimes?='*='
+;
+
+ExecuteStatement:
+	'execute' id=IDENT (args+=Primary)*
+;
+
+GPUStatements:
+	{GPUStatements}
+	'gpu_on' EOLs
+	(stmnts+=Statement EOLs)*
+	'gpu_off'
+;
+
+GPUFreeStatement:
+	'gpu_free' Primary
+;
+
+GPUGetStatement:
+	'gpu_get' Primary
+;
+
+GPUPutStatement:
+	'gpu_put' Primary
+;
+
+GPUAllocateStatement:
+	'gpu_allocate' Primary
+;
+
+PrintScalarStatement:
+	'print_scalar' id=IDENT
+;
+
+PrintIndexStatement:
+	'print_index' id=IDENT
+;
+
+PrintStatement:
+	'print' str=STRING
+;
+
+PrintlnStatement:
+	'println' str=STRING
+;
+
+DestroyStatement:
+	'destroy' id=IDENT
+;
+
+PRequestStatement:
+	'prequest' lhs=DataBlock '=' rhs=DataBlock
+;
+
+CollectiveStatement:
+	'collective' lhs=IDENT '+=' rhs=IDENT
+;
+
+RequestStatement:
+	'request' DataBlock
+;
+
+PrepareStatement:
+	'prepare' lhs=DataBlock '=' rhs=DataBlock
+;
+
+PrepareSumStatement:
+	'prepare' lhs=DataBlock '+=' rhs=DataBlock
+;
+
+GetStatement:
+	'get' DataBlock
+;
+
+
+PutStatement:
+	'put' lhs=DataBlock '=' rhs=DataBlock
+;
+
+PutSumStatement:
+	'put' lhs=DataBlock '+=' rhs=DataBlock
+;
+
+DeleteStatement:
+	'delete' id=IDENT indices=AllocIndexList?
+;
+
+AllocIndexList:
+	'(' firstindex=AllocIndex (',' nextindices+=AllocIndex)* ')'
+;
+
+AllocIndex:
+	'*' | IDENT
+;
+
+
+CreateStatement:
+	'create' id=IDENT dims=DimensionList
+;
+
+DeallocateStatement:
+	'deallocate' id=IDENT indices=AllocIndexList?
+;
+
+AllocateStatement:
+	'allocate' id=IDENT indices=AllocIndexList?
+;
+
+IfStatement:
+	'if' relexp=RelationalExpression EOLs
+		(ifstatements+=Statement EOLs)*
+	('else'	(elsestatements+=Statement EOLs)*)?
+	'endif'
+;
+
+CycleStatement:
+	'cycle' id=IDENT
+;
+
+ExitStatement:
+	'exit'
+;
+
+PardoStatement:
+	'pardo'  starindices=DimensionList EOLs
+	wc=WhereClauseList EOLs
+	(pardostatements+=Statement EOLs)*
+	'endpardo' endindices=DimensionList 
+;
+
+WhereClauseList:
+	{WhereClauseList} ('where' relationalexpr+=RelationalExpression EOLs)*
+;
+
+
+DoSubIndexStatement:
+	'do' startid=IDENT =>'in' startparentid=IDENT EOLs
+	wc=WhereClauseList EOLs
+	(pardostatements+=Statement EOLs)*
+	'enddo' finishid=IDENT 'in' finishparentid=IDENT
+;
+
+DoStatement:
+	'do' beginid=IDENT EOLs
+	wc=WhereClauseList EOLs
+	(pardostatements+=Statement EOLs)*
+	'enddo' endid=IDENT 'in' endparentid=IDENT
+;
+
+BarrierStatement:
+	'sip_barrier' | 'server_barrier'
+;
+
+ReturnStatement:
+	'return'
+;
+
+CallStatement:
+	'call' id=IDENT
+;
+
+Decs:
+	{Decs} dec=(ScalarDec | ArrayDec | IndexDec | IntDec | SpecialDec | SubIndexDec | ProcDec)
+;
+
+ProcDec:
+	'proc' sprocname=IDENT EOLs  
+	(statements+=Statement EOLs)*
+	'endproc' eprocname=IDENT 
+;
+
+SubIndexDec:
+	'subindex' id=IDENT 'of' parentid=IDENT 
+;
+
+DataBlock:
+	id=IDENT '(' dims=DimensionList ')'
+;
+
+Modifier :
+	'sip_consistent' |
+	 'predefined' | 
+	 'persistent' | 
+	 'scoped_extent' | 
+	 'contiguous' | 
+	 'auto_allocate'
+; 
+
+
+SpecialDec:
+	'special' id=IDENT ('w'|'r'|'u')*		
+;
+
+
+IntDec:
+	(modifiers+=Modifier)* 'int' id=IDENT
+;
+
+
+IndexDec:
+	(modifiers+=Modifier)* kind=IndexKind id=IDENT '=' range=Range
+;
+
+Range:
+	(INT| IDENT) ',' (INT | IDENT) 
+;
+
+IndexKind:
+	'moindex' | 'moaindex' | 'mobindex' | 'index' | 'laindex'
+;
+
+ArrayKind :
+	'static' | 'temp' | 'local' | 'distributed' | 'served'
+;
+
+ArrayDec:
+	(modifiers+=Modifier)* kind=ArrayKind id=IDENT '(' dimensions=DimensionList ')'
+;
+
+DimensionList:
+	firstdim=IDENT (',' dims+=IDENT)*
+;
+
+
+RelationalExpression:
+	lhs=UnaryExpression op=RelOp rhs=UnaryExpression
+;
+
+UnaryExpression:
+	(negated?='-')? primary=Primary
+;
+
+RelOp:
+	lt?='<' | gt?='>' | le?='<=' | ge?='>=' | eq?='==' | ne?='!='
+;
+
+ScalarDec:
+	(modifiers+=Modifier)* 'scalar' id=IDENT
+;
+
+Primary:
+	int=INT | double=DOUBLE | id=IDENT | datablock=DataBlock | str=STRING
+;
+
+
+EOLs:
+	(NEWLINE | SL_COMMENT)*
+;
+
+
+terminal SL_COMMENT:
+	'#' !('\n'|'\r')* ('\r'? '\n')?;
+	
+terminal NEWLINE:
+	('\r'? '\n');
+
+terminal IDENT :
+	('a'..'z'|'A'..'Z'|'_')('a'..'z'|'A'..'Z'|'_'|'0'..'9')*
+;
+
+terminal DOUBLE : 
+	INT '.' INT
+;
